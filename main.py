@@ -1,3 +1,7 @@
+########################################
+#Original Author: RamRam #0001
+########################################
+
 import discord
 import os
 import requests
@@ -5,49 +9,52 @@ import re
 import random
 import asyncio
 from dotenv import load_dotenv, find_dotenv
-from replit import db
+from replit import db 
 TOKEN=load_dotenv(find_dotenv())
 from discord.ext import commands
 from discord.ext.commands import has_permissions,MissingPermissions
 import numpy as np
 
-os.system("pip install waifulabs")
+os.system("pip install waifulabs") #replit likes to uninstall things installed with pip whenever it has to do package shit, so we have to install waifulabs again every time the bot is up
 import waifulabs
 
-class NotBotChannel(Exception):
+class NotBotChannel(Exception): #exception used for when a command is not not used in a bot channel
 	pass
-spamlogger={}
 
+spamlogger={} #logs how many messages a user has sent in the past minute
+
+#randomized embed stuff
 emoticons=["-_-", ":(", "o.o", "O.o", "^-^", "^.^", "( ͡° ͜ʖ ͡°)", r"¯\_(ツ)_/¯", "UwU", "OwO", ":{", ":}", ":\\", ":P"]
 success=["Why do I even bother?", "Why am I still doing this?", "Hah!", "Barusu, your pride is disdainful."]
 spam_logger={}
 
+#virtualram functions for the different actions
 killfunction=lambda x: -10*np.arctan(x/4)/(7*np.pi)+1
 insultfunction=lambda x: -10*np.arctan(x/10)/(7*np.pi)+1
 headpatfunction=lambda x: 4.5*np.arctan(x/40)/np.pi +0.75
 complimentfunction=lambda x: 3.1*np.arctan(x/40)/np.pi +0.95
 ram_encounters=["You are shopping at the market. It is a mildly warm summer day, and your eye catches a rather rare sight: Ram getting groceries for the Mathers estate instead of the usual Rem. She stands out among the crowd: the rays sunlight reflecting off her body in a almost beautiful way, and her hair rustling slowly in the gentle breeze. However, she caught your eyes for too long and she walks over to you, clearly mad.", ]
 
-
-
-
+#regex shit
 glare=open('glare.txt','r').read().splitlines()
 def getGlarelist(glarelist):
 	pattern=''
 	for name in glarelist:
-		pattern+=r'((^|\b)(?i)('+ name+r')(\b|$|[?.!,]))|'
+		pattern+=r'((^|\b)(?i)('+ name+r')(\b|$|[?.!,"]))|'
 	return pattern[:-1] #remove annoying pipe-chan at the end of the final expression
 
 Pattern=re.compile(getGlarelist(glare))
 
+#getting server-based prefixes
 def get_prefix(client, message):
+	data=db['server '+str(message.guild.id)]
 	try:
-		return db['server '+str(message.guild.id)][0]
+		return data[0] 
 	except KeyError:
 		db['server '+str(message.guild.id)]=['^ram ']
 		return db['server '+str(message.guild.id)][0]
 
-def disablecheck(ctx):
+def disablecheck(ctx): #check for if the channel is a bot channel
 	data=db["server "+str(ctx.guild.id)]
 	if len(data)<2:
 		for channel in ctx.guild.text_channels:
@@ -67,15 +74,16 @@ async def on_ready():
 
 @bot.event
 async def on_guild_remove(guild):
-	del db["server "+str(guild.id)]
+	del db["server "+str(guild.id)] #free up database space when the bot is removed from a server
 
 @bot.command()
-async def help(ctx):
+async def help(ctx): #the most messy help command ever
 	prefix=db[f"server {ctx.guild.id}"][0]
 	embed=discord.Embed(title="Command Help", color=0xff99e4)
 	embed.set_author(name="Ram Bot", icon_url="https://cdn.discordapp.com/avatars/828806563023159306/ab71416d358f662caf39fd83d32e5047.webp?size=2048")
 	embed.add_field(name="Commands", value=f"{prefix}hah\nGo into a voice channel and use it to find out what it does. *Hah!*\n\n{prefix}clear [amount], *reason\n Clears [amount] amount of messages from the channel for optional [reason]\n\n{prefix}distort [attached image]\nDistorts the attached image.\n\n{prefix}virtualram\nGive Ram love. Or try to kill her. Your choice.\n\n{prefix}waifu\ngenerates a waifu with waifulabs api\n\n\nA **bot channel***: For this bot, a bot channel is a channel where every command can be used. Moderation commands can be used in any channel no matter if it is a bot channel or not. All other commands can only be used in bot channels\n\n {prefix}addbotchannel\nAdds the current channel to the list of bot channels\n\n{prefix}removebotchannel\Removes the current channel from the list of bot channels\n\n{prefix}allbotchannel\nAdds all channels in the server to the list of bot channels\n\n{prefix}removeallbotchannels\nRemoves all channels from the list of botchannels\n\n", inline=False)
 	await ctx.send(embed=embed)
+
 @bot.command()
 async def hah(ctx):
 	guild = ctx.guild
@@ -85,7 +93,7 @@ async def hah(ctx):
 	audio_source = discord.FFmpegPCMAudio('hah.mp3')
 	if not voice_client.is_playing():
 		voice_client.play(audio_source, after=None)
-	await asyncio.sleep(3)
+	await asyncio.sleep(3) 
 	await ctx.voice_client.disconnect()
 
 from distort import randdistort
@@ -101,7 +109,7 @@ async def distort(ctx):
 		with open(f_name, 'wb') as f:
 			f.write(page.content)
 		randdistort(f'img{f_ext}')
-		deskew(deskew('name.png'))
+		deskew(deskew('name.png')) 
 		await ctx.send(file=discord.File('skew_corrected.png'))
 	except NotBotChannel: pass
 
@@ -313,8 +321,9 @@ async def addbotchannel(ctx):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def removebotchannel(ctx):
+	server_data=db['server '+str(ctx.guild.id)]
 	try:
-		db['server '+str(ctx.guild.id)].remove(ctx.channel.id)
+		server_data.remove(ctx.channel.id)
 		embed=discord.Embed(title=f"Bot Channel {random.choice(emoticons)}", description=f"Channel {ctx.channel.mention} is no longer a bot channel.", colour=0xffbbdd)	
 		embed.set_author(name="Ram Bot", icon_url='https://cdn.discordapp.com/avatars/828806563023159306/ab71416d358f662caf39fd83d32e5047.webp?size=2048')	
 		await ctx.send(embed=embed)
@@ -329,9 +338,10 @@ async def removebotchannel(ctx):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def allbotchannel(ctx):
-	db['server '+str(ctx.guild.id)] = [x for x in db['server '+str(ctx.guild.id)] if not isinstance(x, int)]
+	server_data=db['server '+str(ctx.guild.id)]
+	server_data = [x for x in server_data if not isinstance(x, int)]
 	for channel in ctx.guild.text_channels:
-			db['server '+str(ctx.guild.id)].append(channel.id)
+			server_data.append(channel.id)
 	embed=discord.Embed(title=f"Bot Channel {random.choice(emoticons)}", description=f"All channels are now  bot channels", colour=0xffbbdd)	
 	embed.set_author(name="Ram Bot", icon_url='https://cdn.discordapp.com/avatars/828806563023159306/ab71416d358f662caf39fd83d32e5047.webp?size=2048')	
 	await ctx.send(embed=embed)
