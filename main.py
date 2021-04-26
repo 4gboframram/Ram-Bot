@@ -362,10 +362,139 @@ async def removeallbotchannels(ctx):
 		embed.set_author(name="Ram Bot", icon_url='https://cdn.discordapp.com/avatars/828806563023159306/ab71416d358f662caf39fd83d32e5047.webp?size=2048')	
 		await ctx.send(embed=embed)
 
+@bot.command(help='you know')
+@commands.has_permissions(ban_members=True)
+async def ban(ctx, member: discord.Member, *, reason=None):
+	if member.guild_permissions.manage_messages: #basically any moderator role cannot be banned through commands
+		embed = discord.Embed(title="Oops",description="You do not have the permission to ban that user", colour=0xff0000)
+		embed.set_author(name="Ram Bot", icon_url='https://cdn.discordapp.com/avatars/828806563023159306/ab71416d358f662caf39fd83d32e5047.webp?size=2048')
+		await ctx.send(embed=embed)
+		return
+	else: 
+		await member.ban(reason=reason)
+		embed = discord.Embed(title="Banned",description=f"You, {member.mention}, has been banned :(", colour=0xffbbdd)
+		embed.set_author(name="Ram Bot", icon_url='https://cdn.discordapp.com/avatars/828806563023159306/ab71416d358f662caf39fd83d32e5047.webp?size=2048')
+		await ctx.send(f'{member} has been banned \nReason: {reason}')
+
+@bot.command(description="Mutes the specified user.")
+@commands.has_permissions(manage_messages=True)
+async def mute(ctx, member: discord.Member, *, reason=None):
+	guild = ctx.guild
+	mutedRole = discord.utils.get(guild.roles, name="Muted")
+	if member.guild_permissions.manage_messages:
+		embed = discord.Embed(title="Oops",description="You do not have the permission to mute that user", colour=0xff0000)
+		embed.set_author(name="Ram Bot", icon_url='https://cdn.discordapp.com/avatars/828806563023159306/ab71416d358f662caf39fd83d32e5047.webp?size=2048')
+		await ctx.send(embed=embed)
+		return
+	if not mutedRole:
+		mutedRole = await guild.create_role(name="Muted")
+
+		for channel in guild.channels:
+			await channel.set_permissions(mutedRole,
+									speak=False,
+									send_messages=False,
+									read_message_history=True,
+									read_messages=True)
+	embed = discord.Embed(title="muted",
+					description=f"{member.mention} was muted ",
+					colour=0xfff200)
+	embed.add_field(name="reason:", value=reason, inline=False)
+	embed.set_author(name="Ram Bot", icon_url='https://cdn.discordapp.com/avatars/828806563023159306/ab71416d358f662caf39fd83d32e5047.webp?size=2048')
+
+	await member.add_roles(mutedRole, reason=reason)
+	await ctx.send(embed=embed)
+	await member.send(
+		f" you have been muted from: {guild.name}, in channel {ctx.channel.name}\n reason: {reason}")
+
+@bot.command(description="Unmutes a specified user.")
+@commands.has_permissions(manage_messages=True)
+async def unmute(ctx, member: discord.Member):
+	mutedRole = discord.utils.get(ctx.guild.roles, name="Muted")
+	await member.remove_roles(mutedRole)
+	await member.send(f" you have unmuted from: - {ctx.guild.name}")
+	embed = discord.Embed(title="unmute",
+							description=f" unmuted-{member.mention}",
+							colour=discord.Colour.green())
+	embed.set_author(name="Ram Bot", icon_url='https://cdn.discordapp.com/avatars/828806563023159306/ab71416d358f662caf39fd83d32e5047.webp?size=2048')
+	await ctx.send(embed=embed)
+
+@bot.command()
+@commands.has_permissions(manage_messages=True)
+async def tempmute(ctx, member: discord.Member, time: int, d, *, reason=None):
+	if member.guild_permissions.manage_messages:
+		embed = discord.Embed(title="Oops",description="You do not have the permission to mute that user", colour=discord.Colour.red())
+		embed.set_author(name="Ram Bot", icon_url='https://cdn.discordapp.com/avatars/828806563023159306/ab71416d358f662caf39fd83d32e5047.webp?size=2048')
+		await ctx.send(embed=embed)
+		return
+	guild = ctx.guild
+
+	for role in guild.roles:
+		if role.name == "Muted":
+			await member.add_roles(role)
+
+			embed = discord.Embed(
+				title="muted!",
+				description=f"{member.mention} has been tempmuted ",
+				colour=0xfff200)
+			embed.set_author(name="Ram Bot", icon_url='https://cdn.discordapp.com/avatars/828806563023159306/ab71416d358f662caf39fd83d32e5047.webp?size=2048')	
+			embed.add_field(name="reason:", value=reason, inline=False)
+			embed.add_field(name="time left for the mute:",
+							value=f"{time}{d}",
+							inline=False)
+			await ctx.send(embed=embed)
+
+			if d == "s":
+				await asyncio.sleep(time)
+
+			if d == "m":
+				await asyncio.sleep(time * 60)
+
+			if d == "h":
+				await asyncio.sleep(time * 60 * 60)
+
+			if d == "d":
+				await asyncio.sleep(time * 60 * 60 * 24)
+
+			await member.remove_roles(role)
+
+			embed = discord.Embed(title="unmute (temp) ",
+									description=f"unmuted -{member.mention} ",
+									colour=0x00ff00)
+			await ctx.send(embed=embed)
+
+			return
+@bot.command(name='lock')
+@commands.has_permissions(manage_channels=True)
+async def lock(ctx, channel: discord.TextChannel, *, reason=None):
+	if reason==None:
+		r='Unspecified'	
+	else:
+		r=reason
+	await channel.set_permissions(ctx.guild.default_role, send_messages=False)
+	embed = discord.Embed(title="Channel Locked",description=f"{ctx.author.mention} has locked this channel, {channel.mention}\nReason: {r}", colour=0xffff00)
+	embed.set_author(name="Ram Bot", icon_url='https://cdn.discordapp.com/avatars/828806563023159306/ab71416d358f662caf39fd83d32e5047.webp?size=2048')
+	await channel.send(embed=embed)
 
 
 
+@bot.command(name='unlock')
+@commands.has_permissions(manage_channels=True)
+async def unlock(ctx, channel: discord.TextChannel,*, reason=None):
+	if reason==None:
+		r='Unspecified'
+	else:
+		r=reason
+	await channel.set_permissions(ctx.guild.default_role, send_messages=True)
+	embed = discord.Embed(title="Channel Unlocked",description=f"{ctx.author.mention} has unlocked this channel, {channel.mention}\nReason: {r}", colour=0xffff00)
+	embed.set_author(name="Ram Bot", icon_url='https://cdn.discordapp.com/avatars/828806563023159306/ab71416d358f662caf39fd83d32e5047.webp?size=2048')
+	await channel.send(embed=embed)
 
+@bot.command(name='percent')
+async def p(ctx, something):
+	h=hash(str(ctx.author.id)+f' {something}')
+	embed=discord.Embed(title='Rate',description=f"{ctx.author.mention}, you are {h%101}% {something}",colour=0xcc00ff)
+	embed.set_author(name="Ram Bot", icon_url='https://cdn.discordapp.com/avatars/828806563023159306/ab71416d358f662caf39fd83d32e5047.webp?size=2048')	
+	await ctx.send(embed=embed)
 @bot.event
 async def on_message(message):
 	if message.author == bot.user:
@@ -376,19 +505,20 @@ async def on_message(message):
 	global spam_logger	
 	try:
 		try:
-			if db[str(userid)][2]==0 and db[str(userid)][3]==0 and db[str(userid)][4]==0 and db[str(userid)][5]==0:
-				db[str(userid)][0]+=round((10/spam_logger[str(userid)]))
+			user_data=db[str(userid)]
+			if user_data[2]==0 and user_data[3]==0 and user_data[4]==0 and user_data[5]==0:
+				user_data[0]+=round((10/spam_logger[str(userid)]))
 			else: 
-				db[str(userid)][0]+=round((10/spam_logger[str(userid)])*(complimentfunction(db[str(userid)][2])+insultfunction(db[str(userid)][3])+headpatfunction(db[str(userid)][4])+killfunction(db[str(userid)][5]))/4)
+				user_data[0]+=round((10/spam_logger[str(userid)])*(complimentfunction(user_data[2])+insultfunction(user_data[3])+headpatfunction(user_data[4])+killfunction(user_data[5]))/4)
 		except KeyError:
-			db[str(userid)][0]+=10
-		if db[str(userid)][0]>=100+10*db[str(userid)][1]**2:
-			db[str(userid)][1]+=1
-			db[str(userid)][0]=0
-			embed=discord.Embed(title=f"Level Up? {random.choice(emoticons)}", description=f"{message.author.mention}, you have leveled up to level {db[str(userid)][1]}. You still have some work to do. Hah! {random.choice(emoticons)}", colour=0xffbbdd)	
+			user_data[0]+=10
+		if user_data[0]>=100+10*user_data[1]**2:
+			user_data[1]+=1
+			user_data[0]=0
+			embed=discord.Embed(title=f"Level Up? {random.choice(emoticons)}", description=f"{message.author.mention}, you have leveled up to level {user_data[1]}. You still have some work to do. Hah! {random.choice(emoticons)}", colour=0xffbbdd)	
 			embed.set_author(name="Ram Bot", icon_url='https://cdn.discordapp.com/avatars/828806563023159306/ab71416d358f662caf39fd83d32e5047.webp?size=2048')
 			await message.channel.send(embed=embed)
-	except KeyError: db[str(userid)]=[0,0,0,0,0,0]
+	except KeyError: user_data=[0,0,0,0,0,0]
 	await bot.process_commands(message)
 
 
